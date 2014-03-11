@@ -1,6 +1,9 @@
 /*
 * Dunno if I should comment in finnish or english, I chose the latter.
 * 
+* Ive taken some small liberties with the assignment:
+* "events" is not its own array, didnt see the need for it tbh
+* 
 */
 
 var express = require('express'),
@@ -26,6 +29,9 @@ app.configure(function () {
 /*Schema for events*/
 var eventSchema = new mongoose.Schema({
     //name of the event
+    eventId: {
+        type: Number
+    },
     name: {
         type: String,
         required: true
@@ -35,25 +41,31 @@ var eventSchema = new mongoose.Schema({
         //we could use String but thats not cool
         type: [Date],
         default: []
+    },
+    votes: {
+        type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Vote' }],
+        default: []
     }
 });
 var Event = mongoose.model('Event', eventSchema);
-eventSchema.plugin(autoIncrement.plugin, 'Event');
+eventSchema.plugin(autoIncrement.plugin, {model: 'Event', field: 'eventId'});
 
 /*Schema for votes*/
 var voteSchema = new mongoose.Schema({
-    //Name of the person posting the vote
-    name: {
-        type: String,
+    voteId: {
+        type: Number
+    },
+    date: {
+        type: Date,
         required: true
     },
-    votes: {
-        type: [Date],
+    people: {
+        type: [String],
         default: []
     }
 });
 var Vote = mongoose.model('Vote', voteSchema);
-voteSchema.plugin(autoIncrement.plugin, 'Vote');
+voteSchema.plugin(autoIncrement.plugin, {model: 'Vote', field: 'voteId'});
 
 
 /*Posts new event to db*/
@@ -67,13 +79,29 @@ app.post('/events/', function(req, res) {
     });
 });
 
-/*Posts new vote into event with its ID*/
+/*Posts new vote into event with its Id*/
 app.post('/events/:id/vote', function(req, res) {
-    var event = new Event(req.body);
+    Event.findOne({ eventId: req.params.id }, function(err, event) {
+        if(event == null) {
+             return res.send(404, 'Event not found!');
+        }
 
-    event.save(function(err, event) {
-        res.send(201, event);
+        var vote = new Vote(req.body);
+
+        //saving the vote
+        vote.save(function(err, vote) {
+            //push the vote into the event of proper id
+            event.votes.push(vote._id);
+            //save the modified event
+            event.save(function(err, event){
+                //we need this to have the vote information right at hand in the event
+                event.populate('votes', function(err, event){
+                    res.send(201, event);
+                });
+            });
+        });
     });
+
 });
 
 /*Lists all events in db*/
@@ -83,9 +111,10 @@ app.get('/events/list', function(req, res) {
     });
 });
 
-/*Gets a single event with its ID*/
+/*Gets a single event with its Id*/
 app.get('/events/:id', function(req, res) {
-    Event.findOne({ _id: req.params.id }, function(err, event) {
+    //Uses the autoincremented eventId to find event, _not mongoId_
+    Event.findOne({ eventId: req.params.id }, function(err, event) {
         if(event == null) {
              return res.send(404, 'Event not found!');
         }
@@ -94,9 +123,9 @@ app.get('/events/:id', function(req, res) {
 });
 
 /*Gets the results of an event with its ID*/
-app.get('/events/:id', function(req, res) {
-    Event.findOne({ _id: req.params.id }, function(err, event) {
-        if(event == null) {
+app.get('/events/:id/results', function(req, res) {
+    Event.findOne({eventId: req.params.id}).populate('votes').exec(function(err, event){
+        if(event == null){
             return res.send(404, 'Event not found!');
         }
         res.send(event);

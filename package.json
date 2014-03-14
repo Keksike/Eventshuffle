@@ -1,0 +1,25 @@
+{
+  "name": "Eventshuffle",
+  "version": "0.0.0",
+  "description": "",
+  "main": "Eventshuffle.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/Keksike/Eventshuffle.git"
+  },
+  "author": "",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/Keksike/Eventshuffle/issues"
+  },
+  "dependencies": {
+    "underscore": "~1.6.0",
+    "async": "~0.2.10",
+    "mongoose-auto-increment": "~3.0.1",
+    "express": "~3.4.8",
+    "mongoose": "~3.8.8"
+  }
+}

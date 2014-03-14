@@ -27,18 +27,17 @@ app.configure(function () {
 });
 
 /*Schema for events*/
-var eventSchema = new mongoose.Schema({
-    //name of the event
-    eventId: {
+var eventSchema = new mongoose.Schema({   
+    eventId: { //autoincrementing
         type: Number
     },
-    name: {
+    name: { //name of the event
         type: String,
         required: true
     },
     dates: {
-        //Gotta find a better object for date, so we can get rid of time at end 
-        //we could use String but thats not cool
+        // Gotta use String, coz the dates have times, we dont want em
+        // TODO: Make it only accept "yyyy-mm-dd"
         type: [String],
         default: []
     },
@@ -52,9 +51,6 @@ eventSchema.plugin(autoIncrement.plugin, {model: 'Event', field: 'eventId'});
 
 /*Schema for votes*/
 var voteSchema = new mongoose.Schema({
-    voteId: {
-        type: Number
-    },
     date: {
         type: String,
         required: true
@@ -65,7 +61,6 @@ var voteSchema = new mongoose.Schema({
     }
 });
 var Vote = mongoose.model('Vote', voteSchema);
-voteSchema.plugin(autoIncrement.plugin, {model: 'Vote', field: 'voteId'});
 
 
 /*Posts new event to db*/
@@ -83,80 +78,66 @@ app.post('/events/', function(req, res) {
 * Requires a "name", and an array of "dates"
 */
 app.post('/events/:id/vote', function(req, res){
-    console.log('0');
     
     Event.findOne({ eventId: req.params.id }).populate('votes').exec(function(err, event){
-        console.log('1');
 
         if(err != null){
             return res.send(500, err);
         } 
         
-        if(event === null){
-            return res.send(404, new Error('Event not found!'));
+        if(event === null){ //make sure event of given id exists
+            return res.send(404, 'Event not found!');
         } 
         
-        if(req.body.dates == null || !_.isArray(req.body.dates)){
-            return res.send(400, new Error('"dates" - field is required and it should be an array!'));
+        if(req.body.dates == null || !_.isArray(req.body.dates)){ //make sure we were given an array of dates
+            return res.send(400, '"dates" - field is required and it should be an array!');
         }
 
-        if(req.body.name == null){
-            return res.send(400, new Error('"name" - field is required!'));
+        if(req.body.name == null){ //make sure we were given a name
+            return res.send(400, '"name" - field is required!');
         }
 
-        console.log('3');
         //lets iterate through the given dates
         async.map(req.body.dates, function(date, done) { 
-            console.log('4');
+
             var vote = _.findWhere(event.votes, { date: date });
-            console.log('5');
             if (vote != null){ // If vote already exists...
-                // Lets push the name if it doesnt exist
-                console.log('5.5');
+                // Lets push the name if it name isnt already there
                 if(vote.people.indexOf(req.body.name) === -1){
                     vote.people.push(req.body.name);
                     return vote.save(done);
-                    console.log('6');
                 }
-
                 // Lets return vote coz we dont need to do anything to it
                 return done(null, vote);
-                console.log('7');
             }
             // If existing vote wasnt found, lets create it
             // Lets also check that it has a valid date.
             if(event.dates.indexOf(date) > -1){
-                console.log('8');
                 var vote = new Vote({
-                    date: req.body.date,
+                    date: date,
                     people: [req.body.name]
                 });
-                console.log('9');
                 return vote.save(done);
             }
-            console.log('10');
-            done(new Error('Invalid date'));
+            done('Invalid date');
 
         }, function(err, results){
-            console.log('11');
-            console.log(event.votes, results);
-            console.log(err);
             if(err != null){
                 return res.send(400, err);
             }
             // Lets combine the votes of the results and the votes which were already there.
             // Lets also change the list to be only mongoids
-            event.votes = event.votes.concat(results).map(function(vote){
-                return vote._id;
-                console.log('13');
-            });
+            event.votes = event.votes.filter(function(vote){
+                _.findWhere(results, {_id: vote._id}) === null;
+            }).concat(results);
 
             event.save(function(err, event){
-                console.log('14');
                 if(err != null){
                     return res.send(400, err);
                 }
-                res.send(201, event);        
+                event.populate('votes', function(err, event){
+                    res.send(201, event);
+                });
             });
         });
     });
@@ -171,7 +152,6 @@ app.get('/events/list', function(req, res) {
 
 /*Gets a single event with its Id*/
 app.get('/events/:id', function(req, res) {
-    //Uses the autoincremented eventId to find event, _not mongoId_
     Event.findOne({ eventId: req.params.id }, function(err, event) {
         if(event == null) {
              return res.send(404, 'Event not found!');

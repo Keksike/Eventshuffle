@@ -1,7 +1,9 @@
 /*
 * Dunno if I should comment in finnish or english, I chose the latter.
 * 
-* 
+* Small liberties taken from specs:
+* - event's id is called eventId rather than id
+* -  
 */
 
 var express = require('express'),
@@ -10,7 +12,7 @@ var express = require('express'),
     mongoose = require('mongoose'), //for handling mongodb, creating Schemas etc.
     autoIncrement = require('mongoose-auto-increment'), //for autoassigning id's to events and votes
     async = require('async'),//for iterating through vote-dates
-    _ = require('underscore'); //for findWhere in voting
+    _ = require('underscore'); //for findWhere in voting and styling the outputs
 
 var app = express();
 
@@ -27,23 +29,30 @@ app.configure(function () {
 });
 
 /*Schema for events*/
-var eventSchema = new mongoose.Schema({   
-    eventId: { //autoincrementing
+var eventSchema = new mongoose.Schema({
+    //name of the event
+    eventId: {
         type: Number
     },
-    name: { //name of the event
+    name: {
         type: String,
         required: true
     },
     dates: {
-        // Gotta use String, coz the dates have times, we dont want em
-        // TODO: Make it only accept "yyyy-mm-dd"
+        //Gotta find a better object for date, so we can get rid of time at end
+        //we could use String but thats not cool
         type: [String],
         default: []
     },
     votes: {
         type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Vote' }],
         default: []
+    }
+}, {
+    toJSON: { //mongoids or mongoversion doesnt need to be shown
+        transform: function(doc, ret, options) {
+            return _.omit(ret, ['_id', '__v']);
+        }
     }
 });
 var Event = mongoose.model('Event', eventSchema);
@@ -59,6 +68,12 @@ var voteSchema = new mongoose.Schema({
         type: [String],
         default: []
     }
+}, {
+    toJSON: { //mongoids or mongoversion doesnt need to be shown
+        transform: function(doc, ret, options) {
+            return _.omit(ret, ['_id', '__v']);
+        }
+    }
 });
 var Vote = mongoose.model('Vote', voteSchema);
 
@@ -69,7 +84,7 @@ app.post('/events/', function(req, res) {
 
     //Save it
     event.save(function(err, event) {
-        res.send(201, event);
+        res.send(201, _.pick(event, 'eventId'));
     });
 });
 
@@ -145,7 +160,8 @@ app.post('/events/:id/vote', function(req, res){
 
 /*Lists all events in db*/
 app.get('/events/list', function(req, res) {
-    Event.find({}, function(err, events) {
+    //shows only id and name of events
+    Event.find({}, 'eventId name', function(err, events) {
         res.send(events);
     });
 });
@@ -168,6 +184,31 @@ app.get('/events/:id/results', function(req, res) {
         if(event == null){
             return res.send(404, 'Event not found!');
         }
+        
+        //names variable will include all the names of all the votes of this event
+        //plucks all the people of all the votes, flattens structure, then removes duplicates
+        //underscore is awesome
+        var names = _.uniq(_.flatten(_.pluck(event.votes, 'people')));
+
+        //logic for checking the suitableDates
+        //aka dates that suit everyone who have voted so far
+        var suitableDates = event.votes.filter(function(vote){
+
+            //lets check if the list of all the names and the list of people in vote are the same
+            //im sure theres a faster way to do this but this one looks nice
+            if(names.length == vote.people.length){ //makes sure lengths are same
+                //if intersection doesnt change length, the arrays have the same names in them
+                return _.intersection(names, vote.people).length == names.length;
+            }
+            return false;
+        });
+
+        //lets put the suitable dates into event
+        event = event.toObject();
+        event.suitableDates = suitableDates;
+        //we dont want to shot dates and votes
+        event = _.omit(event, ['dates', 'votes', '__v', '_id']);
+
         res.send(event);
     });
 });

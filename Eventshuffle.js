@@ -7,7 +7,7 @@
 var express = require('express'),
     path = require('path'),
     http = require('http'),
-    mongoose = require('mongoose'),
+    mongoose = require('mongoose'), //for handling mongodb, creating Schemas etc.
     autoIncrement = require('mongoose-auto-increment'), //for autoassigning id's to events and votes
     async = require('async'),//for iterating through vote-dates
     _ = require('underscore'); //for findWhere in voting
@@ -62,7 +62,6 @@ var voteSchema = new mongoose.Schema({
 });
 var Vote = mongoose.model('Vote', voteSchema);
 
-
 /*Posts new event to db*/
 app.post('/events/', function(req, res) {
     //Create new instance of Event-model, with the sent data (req.body)
@@ -74,7 +73,8 @@ app.post('/events/', function(req, res) {
     });
 });
 
-/*Posts new vote into event with its Id
+/*
+* Posts new vote into event with its Id
 * Requires a "name", and an array of "dates"
 */
 app.post('/events/:id/vote', function(req, res){
@@ -156,7 +156,9 @@ app.get('/events/:id', function(req, res) {
         if(event == null) {
              return res.send(404, 'Event not found!');
         }
-        res.send(event);
+        event.populate('votes', function(err, event){
+            res.send(event);
+        });
     });
 });
 

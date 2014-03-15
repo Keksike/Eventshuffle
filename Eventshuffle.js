@@ -1,9 +1,8 @@
 /*
 * Dunno if I should comment in finnish or english, I chose the latter.
 * 
-* Small liberties taken from specs:
-* - event's id is called eventId rather than id
-* -  
+* REST API for scheduling events with friends
+* 
 */
 
 var express = require('express'),
@@ -12,11 +11,11 @@ var express = require('express'),
     mongoose = require('mongoose'), //for handling mongodb, creating Schemas etc.
     autoIncrement = require('mongoose-auto-increment'), //for autoassigning id's to events and votes
     async = require('async'),//for iterating through vote-dates
-    _ = require('underscore'); //for findWhere in voting and styling the outputs
+    _ = require('underscore'); //for findWhere in voting and other little things
 
 var app = express();
 
-/*We need these to use mongoose-auto-increment*/
+/*Lets take mongoose-auto-increment into use*/
 var connection = mongoose.createConnection("mongodb://localhost/myDatabase");
 autoIncrement.initialize(connection);
 

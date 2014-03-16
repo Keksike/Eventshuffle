@@ -3,15 +3,16 @@
 * 
 * REST API for scheduling events with friends
 * 
+* https://github.com/Keksike/Eventshuffle
 */
 
 var express = require('express'),
     path = require('path'),
     http = require('http'),
     mongoose = require('mongoose'), //for handling mongodb, creating Schemas etc.
-    autoIncrement = require('mongoose-auto-increment'), //for autoassigning id's to events and votes
-    async = require('async'),//for iterating through vote-dates
-    _ = require('underscore'); //for findWhere in voting and other little things
+    autoIncrement = require('mongoose-auto-increment'), //for autoassigning id's to events
+    async = require('async'),       //for iterating through vote-dates
+    _ = require('underscore');      //for findWhere in voting and other little things
 
 var app = express();
 
@@ -77,6 +78,7 @@ var voteSchema = new mongoose.Schema({
 var Vote = mongoose.model('Vote', voteSchema);
 
 /*Posts new event to db*/
+/*Requires a "name" and "dates[]"*/
 app.post('/events/', function(req, res) {
     //Create new instance of Event-model, with the sent data (req.body)
     var event = new Event(req.body);
@@ -89,7 +91,7 @@ app.post('/events/', function(req, res) {
 
 /*
 * Posts new vote into event with its Id
-* Requires a "name", and an array of "dates"
+* Requires a "name", and "dates[]""
 */
 app.post('/events/:id/vote', function(req, res){
     

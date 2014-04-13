@@ -1,5 +1,4 @@
 /*
-* Dunno if I should comment in finnish or english, I chose the latter.
 * 
 * REST API for scheduling events with friends
 * 

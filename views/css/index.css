@@ -1,0 +1,7 @@
+body{
+	padding-top: 5%;
+	background-image: url('images/debut_dark.png');
+
+	/*this should be removed from body l8r*/
+	color: white;
+}

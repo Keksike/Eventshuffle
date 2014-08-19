@@ -51,7 +51,7 @@ app.configure(function () {
     app.use(passport.session());
 
     app.use(express.bodyParser()),
-    app.use(express.static(path.join(__dirname, 'public')));
+    app.use(express.static(path.join(__dirname, './views')));
     mongoose.connect('mongodb://localhost/eventsdb');
 
 

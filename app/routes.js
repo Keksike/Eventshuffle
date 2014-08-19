@@ -1,10 +1,13 @@
 // app/routes.js
 module.exports = function(app, passport) {
 
-	/*Home page, also works as login page*/
+	/*Home page*/
 	app.get('/', function(req, res) {
 		res.render('index.ejs', { message: req.flash('loginMessage') }); 
 	});
+
+	// process the login form
+	// app.post('/login', do all our passport stuff here);
 
 	/*Signup page*/
 	app.get('/signup', function(req, res) {

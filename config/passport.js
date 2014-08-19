@@ -1,4 +1,4 @@
-/*--------------------- config/passport.js ---------------------*/
+/*---------------------config/passport.js----------------------------*/
 
 var LocalStrategy   = require('passport-local').Strategy, // load all the things we need
 	User       		= require('../app/models/user');      // load up the user model
@@ -25,14 +25,13 @@ module.exports = function(passport) {
 	/*------LOCAL SIGNUP------*/
 
 	passport.use('local-signup', new LocalStrategy({
-		// by default, local strategy uses username and password, we will override with email
 		usernameField : 'email',
 		passwordField : 'password',
 		passReqToCallback : true // allows us to pass back the entire request to the callback
 	},
 	function(req, email, password, done) {
 
-		// asynchronous
+		// asynchronousity achieved with nextTick
 		// User.findOne wont fire unless data is sent back
 		process.nextTick(function() {
 

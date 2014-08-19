@@ -5,13 +5,25 @@
 * https://github.com/Keksike/Eventshuffle
 */
 
-var express = require('express'),
-    path = require('path'),
-    http = require('http'),
-    mongoose = require('mongoose'), //for handling mongodb, creating Schemas etc.
-    autoIncrement = require('mongoose-auto-increment'), //for autoassigning id's to events
-    async = require('async'),       //for iterating through vote-dates
-    _ = require('underscore');      //for findWhere in voting and other little things
+var express         = require('express'),
+    path            = require('path'),
+    http            = require('http'),
+    mongoose        = require('mongoose'),                //for handling mongodb, creating Schemas etc.
+    autoIncrement   = require('mongoose-auto-increment'), //for autoassigning id's to events
+    async           = require('async'),                   //for iterating through vote-dates
+    _               = require('underscore'),              //for findWhere in voting and other little things
+    passport        = require('passport'),                //for authentication system
+
+    morgan          = require('morgan'),
+    cookieParser    = require('cookie-parser'),
+    bodyParser      = require('body-parser'),
+    session         = require('express-session'),
+    flash           = require('connect-flash');
+
+
+var LocalStrategy = require('passport-local').Strategy;
+var configDB = require('./config/database.js');
+
 
 var app = express();
 
@@ -19,13 +31,117 @@ var app = express();
 var connection = mongoose.createConnection("mongodb://localhost/myDatabase");
 autoIncrement.initialize(connection);
 
+
 app.configure(function () {
+    app.use(morgan('dev')); // log every request to the console
+    app.use(cookieParser()); // read cookies (needed for auth)
+    app.use(bodyParser()); // get information from html forms
+    
+    /*Passport stuff*/
+    app.use(session({ secret: 'lol' })); // session secret
+    app.use(passport.initialize());
+    app.use(flash()); // use connect-flash for flash messages stored in session
+
+    /*port*/
     app.set('port', process.env.PORT || 3000);
-    app.use(express.logger('dev'));
+
+    app.set('view engine', 'ejs'); // set up ejs for templating
+
+    app.use(passport.session());
+
     app.use(express.bodyParser()),
     app.use(express.static(path.join(__dirname, 'public')));
     mongoose.connect('mongodb://localhost/eventsdb');
+
+
+    require('./config/passport')(passport);
+    require('./app/routes.js')(app, passport); // load our routes and pass in our app and fully configured passport
 });
+
+/* Authentication system code begins here
+ *
+ *
+ */
+
+/*User info schema*/
+/*var UserSchema = mongoose.Schema;
+var UserDetail = new UserSchema({
+        username: String,
+        password: String
+    }, {
+        collection: 'userInfo'
+    }
+);
+
+var UserDetails = mongoose.model('userInfo', UserDetail);*/
+
+/*Login screen*/
+/*app.get('/login', function(req, res) {
+    res.sendfile('views/login.html');
+});*/
+
+/*Receive login-info*/
+/*app.post('/login',
+    passport.authenticate('local', {
+        successRedirect: '/loginSuccess',
+        failureRedirect: '/loginFailed',
+  })
+);*/
+
+/*Login failed*/
+/*app.get('/loginFailed', function(req, res, next) {
+    res.sendfile('views/loginFailed.html');
+    setTimeout(res.redirect('/login'), 2000);
+});*/
+ 
+/*Login successful*/
+/*app.get('/loginSuccess', function(req, res, next) {
+    res.send('Successfully authenticated');
+});*/
+
+/*(De)Serialization*/
+/*passport.serializeUser(function(user, done) {
+    done(null, user);
+});
+passport.deserializeUser(function(id, done) {
+  User.findById(id, function(err, user) {
+    done(err, user);
+  });
+});*/
+
+
+/*Local authentication strategy*/
+/*passport.use(new LocalStrategy(function(username, password, done) {
+    process.nextTick(function() {
+        UserDetails.findOne({
+            'username': username,
+        }, function(err, user) {
+            if (err) {
+                return done(err);
+            }
+ 
+            if (!user) {
+                return done(null, false, { message: 'Incorrect username!'});
+            }
+ 
+            if (user.password != password) {
+                return done(null, false, { message: 'Incorrect username!'});
+            }
+ 
+            return done(null, user);
+        });
+    });
+}));
+*/
+/* Authentication system code ends
+ *
+ *
+ */
+
+/* Eventshuffle code begins here
+ *
+ *
+ */
 
 /*Schema for events*/
 var eventSchema = new mongoose.Schema({
@@ -212,6 +328,11 @@ app.get('/events/:id/results', function(req, res) {
         res.send(event);
     });
 });
+
+/* Eventshuffle code ends here
+ *
+ *
+ */
 
 http.createServer(app).listen(app.get('port'), function () {
     console.log("Listening on port " + app.get('port'));

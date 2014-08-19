@@ -6,6 +6,7 @@
 */
 
 var express         = require('express'),
+    app             = express(),                          //take express into use
     path            = require('path'),
     http            = require('http'),
     mongoose        = require('mongoose'),                //for handling mongodb, creating Schemas etc.
@@ -24,19 +25,19 @@ var express         = require('express'),
 var LocalStrategy = require('passport-local').Strategy;
 var configDB = require('./config/database.js');
 
-
-var app = express();
-
 /*Lets take mongoose-auto-increment into use*/
 var connection = mongoose.createConnection("mongodb://localhost/myDatabase");
 autoIncrement.initialize(connection);
+
+//take passport config into use
+require('./config/passport')(passport);
 
 
 app.configure(function () {
     app.use(morgan('dev')); // log every request to the console
     app.use(cookieParser()); // read cookies (needed for auth)
     app.use(bodyParser()); // get information from html forms
-    
+
     /*Passport stuff*/
     app.use(session({ secret: 'lol' })); // session secret
     app.use(passport.initialize());
